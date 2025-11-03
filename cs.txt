@@ -1,0 +1,55 @@
+using System.Collections.ObjectModel;
+
+namespace spotifyv2;
+
+public partial class MainPage : ContentPage
+{
+    public ObservableCollection<string> Songs { get; set; }
+    int current = 0;
+
+    public MainPage()
+    {
+        InitializeComponent();
+
+        Songs = new ObservableCollection<string>
+        {
+            "Song 1",
+            "Song 2",
+            "Song 3"
+        };
+
+        UpdateSong();
+    }
+
+    void UpdateSong()
+    {
+        songLabel.Text = Songs[current];
+        songSlider.Value = 0;
+    }
+
+    void NextSong(object sender, EventArgs e)
+    {
+        current++;
+        if (current >= Songs.Count)
+            current = 0;
+        UpdateSong();
+    }
+
+    void PrevSong(object sender, EventArgs e)
+    {
+        current--;
+        if (current < 0)
+            current = Songs.Count - 1;
+        UpdateSong();
+    }
+
+    void SelectSong(object sender, TappedEventArgs e)
+    {
+        current = int.Parse(e.Parameter.ToString());
+        UpdateSong();
+    }
+
+    void OnSliderChanged(object sender, ValueChangedEventArgs e)
+    {
+    }
+}
