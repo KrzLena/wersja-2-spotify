@@ -15,7 +15,10 @@ public partial class MainPage : ContentPage
         {
             "Song 1",
             "Song 2",
-            "Song 3"
+            "Song 3",
+            "Song 4",
+            "Song 5",
+            "Song 6"
         };
 
         UpdateSong();
@@ -47,6 +50,34 @@ public partial class MainPage : ContentPage
     {
         current = int.Parse(e.Parameter.ToString());
         UpdateSong();
+    }
+
+    void AddSong(object sender, EventArgs e)
+    {
+        Songs.Add($"Song {Songs.Count + 1}");
+
+        if (songsGrid.RowDefinitions.Count * 2 <= Songs.Count)
+            songsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(120) });
+
+        int index = Songs.Count - 1;
+        int r = index / 2;
+        int c = index % 2;
+
+        var img = new Image
+        {
+            Source = "p1.jpg",
+            Aspect = Aspect.AspectFill
+        };
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += SelectSong;
+        tap.CommandParameter = index;
+        img.GestureRecognizers.Add(tap);
+
+        Grid.SetRow(img, r);
+        Grid.SetColumn(img, c);
+
+        songsGrid.Children.Add(img);
     }
 
     void OnSliderChanged(object sender, ValueChangedEventArgs e)
