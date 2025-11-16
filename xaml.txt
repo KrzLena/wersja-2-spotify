@@ -1,105 +1,130 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="spotifyv2.MainPage"
-             BackgroundColor="#0E0B25">
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="OdtwarzaczMuzyki.MainPage"
+    BackgroundColor="#0F1020"
+    Shell.NavBarIsVisible="False"
+    Padding="0">
 
-    <Grid>
+    <Grid RowSpacing="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="64"/>
+        </Grid.RowDefinitions>
 
-        <VerticalStackLayout Padding="0">
+        <Grid Grid.Row="0" Padding="12" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <Grid BackgroundColor="#635DFF" Padding="10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="40" />
-                </Grid.ColumnDefinitions>
-                <Entry BackgroundColor="White" TextColor="Black" HeightRequest="35" />
-                <Image Source="search.png" Grid.Column="1" WidthRequest="24" HeightRequest="24"
-                       VerticalOptions="Center" HorizontalOptions="Center" />
-            </Grid>
+            <Label Text="Player Title"
+                   VerticalOptions="Center"
+                   FontSize="24"
+                   TextColor="White"/>
 
-            <Button Text="Dodaj piosenkę" Clicked="AddSong" Margin="10" VerticalOptions="Start"/>
-
-        </VerticalStackLayout>
-
-        <ScrollView VerticalOptions="FillAndExpand" Margin="0,100,0,120" BackgroundColor="Transparent">
-
-            <Grid x:Name="songsGrid" Padding="20" RowSpacing="15" ColumnSpacing="15">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="120" />
-                    <RowDefinition Height="120" />
-                    <RowDefinition Height="120" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Image Grid.Row="0" Grid.Column="0" Source="p6.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="5"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-                <Image Grid.Row="0" Grid.Column="1" Source="p5.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="4"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-                <Image Grid.Row="1" Grid.Column="0" Source="p1.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="0"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-                <Image Grid.Row="1" Grid.Column="1" Source="p2.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="1"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-                <Image Grid.Row="2" Grid.Column="0" Source="p3.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="2"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-                <Image Grid.Row="2" Grid.Column="1" Source="p4.jpg" Aspect="AspectFill">
-                    <Image.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="SelectSong" CommandParameter="3"/>
-                    </Image.GestureRecognizers>
-                </Image>
-
-            </Grid>
-        </ScrollView>
-
-        <Grid BackgroundColor="#635DFF" Padding="10" VerticalOptions="End" HeightRequest="120">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <Label x:Name="songLabel" Text="Title" TextColor="White" FontSize="16" />
-
-            <Slider x:Name="songSlider" Grid.Row="0" Minimum="0" Maximum="100"
-                    Margin="60,0,60,0" />
-
-            <Grid Grid.Row="1" ColumnSpacing="40" Padding="0,10,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Button Grid.Column="0" HeightRequest="30" HorizontalOptions="Center"
-                        Text="Prev" Clicked="PrevSong" />
-                <Button Grid.Column="1" HeightRequest="30" HorizontalOptions="Center"
-                        Text="Play" />
-                <Button Grid.Column="2" HeightRequest="30" HorizontalOptions="Center"
-                        Text="Next" Clicked="NextSong" />
-            </Grid>
+            <Button x:Name="AddSongButton"
+                    Grid.Column="1"
+                    Text="+"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    VerticalOptions="Center"
+                    Clicked="Add_Button_Clicked"/>
         </Grid>
 
+        <SearchBar x:Name="SearchBar"
+                   Grid.Row="1"
+                   Placeholder="Szukaj"
+                   TextChanged="SearchBar_TextChanged"
+                   Margin="10"
+                   BackgroundColor="#23243A"
+                   TextColor="White"/>
+
+        <CollectionView x:Name="SongsCollectionView"
+                        Grid.Row="2"
+                        SelectionMode="Single"
+                        SelectionChanged="SongsCollectionView_SelectionChanged"
+                        Margin="8"
+                        ItemsLayout="VerticalGrid,2">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame HasShadow="False"
+                           CornerRadius="12"
+                           Padding="0"
+                           Margin="8"
+                           BackgroundColor="#2F2E46">
+                        <Grid>
+                            <Image Source="{Binding ArtworkPath}" Aspect="AspectFill" HeightRequest="160" WidthRequest="160"/>
+                            <BoxView BackgroundColor="#00000080"/>
+                            <Label Text="{Binding Title}"
+                                   HorizontalOptions="Start"
+                                   VerticalOptions="End"
+                                   Margin="8"
+                                   TextColor="White"
+                                   FontAttributes="Bold"/>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Frame Grid.Row="3"
+               Margin="10"
+               Padding="10"
+               BackgroundColor="#2F2E46"
+               CornerRadius="12">
+            <Label x:Name="CurrentSongLabel"
+                   Text="Brak odtwarzania"
+                   FontSize="16"
+                   HorizontalOptions="Center"
+                   TextColor="White"/>
+        </Frame>
+
+        <StackLayout Grid.Row="4" Margin="10" Spacing="8">
+            <Slider x:Name="PositionSlider"
+                    Minimum="0"
+                    Maximum="1"
+                    ValueChanged="PositionSlider_ValueChanged"
+                    DragStarted="PositionSlider_DragStarted"
+                    DragCompleted="PositionSlider_DragCompleted"/>
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="PrevButton" Grid.Column="0" Text="⏮" Clicked="PrevButton_Clicked"/>
+                <Button x:Name="PlayButton" Grid.Column="1" Text="▶️" Clicked="PlayButton_Clicked"/>
+                <Button x:Name="PauseButton" Grid.Column="2" Text="⏸" Clicked="PauseButton_Clicked"/>
+                <Button x:Name="NextButton" Grid.Column="3" Text="⏭" Clicked="NextButton_Clicked"/>
+            </Grid>
+        </StackLayout>
+
+        <Grid Grid.Row="5" BackgroundColor="#5E5AC8" Padding="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Text="🔖" BackgroundColor="Transparent" TextColor="White"/>
+            <Button Grid.Column="1" Text="🏠" BackgroundColor="Transparent" TextColor="White"/>
+            <Button Grid.Column="2" Text="＋" BackgroundColor="Transparent" TextColor="White"/>
+        </Grid>
+
+        <MediaElement x:Name="Player"
+                      IsVisible="False"
+                      AutoPlay="False"
+                      MediaEnded="Player_MediaEnded"
+                      MediaOpened="Player_MediaOpened"
+                      PositionChanged="Player_PositionChanged"/>
     </Grid>
 </ContentPage>
