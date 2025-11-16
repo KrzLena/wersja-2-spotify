@@ -1,86 +1,211 @@
+using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
+using OdtwarzaczMuzyki.Models;
 
-namespace spotifyv2;
+namespace OdtwarzaczMuzyki;
 
 public partial class MainPage : ContentPage
 {
-    public ObservableCollection<string> Songs { get; set; }
-    int current = 0;
+    const string TRACKS_FILE = "tracks.json";
+    ObservableCollection<Track> tracks = new();
+    ObservableCollection<Track> filtered = new();
+    int currentIndex = -1;
+    bool isPlaying = false;
+    bool sliderDragging = false;
 
     public MainPage()
     {
         InitializeComponent();
+        SongsCollectionView.ItemsSource = filtered;
+        LoadTracksFromStorage();
+        RefreshFiltered(string.Empty);
+    }
 
-        Songs = new ObservableCollection<string>
+    void RefreshFiltered(string query)
+    {
+        filtered.Clear();
+        var q = (query ?? string.Empty).Trim().ToLowerInvariant();
+        var list = string.IsNullOrWhiteSpace(q) ? tracks : tracks.Where(t => (t.Title ?? string.Empty).ToLowerInvariant().Contains(q));
+        foreach (var t in list) filtered.Add(t);
+    }
+
+    async void Add_Button_Clicked(object sender, EventArgs e)
+    {
+        var pick = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Wybierz plik audio", FileTypes = FilePickerFileType.Audio });
+        if (pick == null) return;
+        string filePath = pick.FullPath;
+        if (string.IsNullOrEmpty(filePath))
         {
-            "Song 1",
-            "Song 2",
-            "Song 3",
-            "Song 4",
-            "Song 5",
-            "Song 6"
-        };
-
-        UpdateSong();
+            using var stream = await pick.OpenReadAsync();
+            var dest = Path.Combine(FileSystem.AppDataDirectory, pick.FileName);
+            using var outStream = File.OpenWrite(dest);
+            await stream.CopyToAsync(outStream);
+            filePath = dest;
+        }
+        var title = Path.GetFileNameWithoutExtension(pick.FileName);
+        var art = "default_artwork.png";
+        var newTrack = new Track { Title = title, FilePath = filePath, ArtworkPath = art };
+        tracks.Add(newTrack);
+        filtered.Add(newTrack);
+        SaveTracksToStorage();
     }
 
-    void UpdateSong()
+    void SearchBar_TextChanged(object sender, TextChangedEventArgs e)
     {
-        songLabel.Text = Songs[current];
-        songSlider.Value = 0;
+        RefreshFiltered(e.NewTextValue);
     }
 
-    void NextSong(object sender, EventArgs e)
+    void SongsCollectionView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        current++;
-        if (current >= Songs.Count)
-            current = 0;
-        UpdateSong();
+        var selected = e.CurrentSelection.FirstOrDefault() as Track;
+        if (selected == null) return;
+        currentIndex = filtered.IndexOf(selected);
+        PlayCurrent();
     }
 
-    void PrevSong(object sender, EventArgs e)
+    void PlayCurrent()
     {
-        current--;
-        if (current < 0)
-            current = Songs.Count - 1;
-        UpdateSong();
-    }
-
-    void SelectSong(object sender, TappedEventArgs e)
-    {
-        current = int.Parse(e.Parameter.ToString());
-        UpdateSong();
-    }
-
-    void AddSong(object sender, EventArgs e)
-    {
-        Songs.Add($"Song {Songs.Count + 1}");
-
-        if (songsGrid.RowDefinitions.Count * 2 <= Songs.Count)
-            songsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(120) });
-
-        int index = Songs.Count - 1;
-        int r = index / 2;
-        int c = index % 2;
-
-        var img = new Image
+        if (currentIndex < 0 || currentIndex >= filtered.Count) return;
+        var t = filtered[currentIndex];
+        CurrentSongLabel.Text = t.Title ?? "Brak tytułu";
+        try
         {
-            Source = "p1.jpg",
-            Aspect = Aspect.AspectFill
-        };
-
-        var tap = new TapGestureRecognizer();
-        tap.Tapped += SelectSong;
-        tap.CommandParameter = index;
-        img.GestureRecognizers.Add(tap);
-
-        Grid.SetRow(img, r);
-        Grid.SetColumn(img, c);
-
-        songsGrid.Children.Add(img);
+            if (File.Exists(t.FilePath))
+                Player.Source = MediaSource.FromFile(t.FilePath);
+            else
+                Player.Source = MediaSource.FromUri(t.FilePath);
+            Player.Stop();
+            Player.Play();
+            isPlaying = true;
+        }
+        catch (Exception ex)
+        {
+            DisplayAlert("Błąd", ex.Message, "OK");
+        }
     }
 
-    void OnSliderChanged(object sender, ValueChangedEventArgs e)
+    void PlayButton_Clicked(object sender, EventArgs e)
     {
+        if (!isPlaying)
+        {
+            if (currentIndex == -1 && filtered.Count > 0)
+            {
+                currentIndex = 0;
+                PlayCurrent();
+            }
+            else
+            {
+                Player.Play();
+                isPlaying = true;
+            }
+        }
+    }
+
+    void PauseButton_Clicked(object sender, EventArgs e)
+    {
+        if (isPlaying)
+        {
+            Player.Pause();
+            isPlaying = false;
+        }
+    }
+
+    void PrevButton_Clicked(object sender, EventArgs e)
+    {
+        if (filtered.Count == 0) return;
+        currentIndex = Math.Max(0, currentIndex - 1);
+        PlayCurrent();
+    }
+
+    void NextButton_Clicked(object sender, EventArgs e)
+    {
+        if (filtered.Count == 0) return;
+        currentIndex = Math.Min(filtered.Count - 1, currentIndex + 1);
+        PlayCurrent();
+    }
+
+    void Player_MediaEnded(object sender, EventArgs e)
+    {
+        if (currentIndex + 1 < filtered.Count)
+        {
+            currentIndex++;
+            PlayCurrent();
+        }
+        else
+        {
+            isPlaying = false;
+            CurrentSongLabel.Text = "Koniec listy";
+            PositionSlider.Value = 0;
+        }
+    }
+
+    void Player_MediaOpened(object sender, EventArgs e)
+    {
+        try
+        {
+            var dur = Player.Duration;
+            if (dur.TotalSeconds > 0) PositionSlider.Maximum = dur.TotalSeconds;
+        }
+        catch { }
+    }
+
+    void Player_PositionChanged(object sender, MediaPositionChangedEventArgs e)
+    {
+        if (sliderDragging) return;
+        Device.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                var pos = Player.Position.TotalSeconds;
+                var dur = Player.Duration.TotalSeconds;
+                if (dur > 0)
+                {
+                    PositionSlider.Maximum = dur;
+                    PositionSlider.Value = pos;
+                }
+            }
+            catch { }
+        });
+    }
+
+    void PositionSlider_ValueChanged(object sender, ValueChangedEventArgs e) { }
+
+    void PositionSlider_DragStarted(object sender, EventArgs e) { sliderDragging = true; }
+
+    void PositionSlider_DragCompleted(object sender, EventArgs e)
+    {
+        sliderDragging = false;
+        try { Player.Position = TimeSpan.FromSeconds(PositionSlider.Value); } catch { }
+    }
+
+    void SaveTracksToStorage()
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, TRACKS_FILE);
+            var json = JsonSerializer.Serialize(tracks);
+            File.WriteAllText(path, json);
+        }
+        catch { }
+    }
+
+    void LoadTracksFromStorage()
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, TRACKS_FILE);
+            if (!File.Exists(path)) return;
+            var json = File.ReadAllText(path);
+            var list = JsonSerializer.Deserialize<List<Track>>(json);
+            if (list == null) return;
+            tracks.Clear();
+            foreach (var t in list) tracks.Add(t);
+        }
+        catch { }
     }
 }
